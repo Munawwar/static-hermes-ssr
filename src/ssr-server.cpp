@@ -15,8 +15,18 @@
 #include <iostream>
 #include <string>
 
-// The compiled JS unit is exported with this name
-extern "C" SHUnit *sh_export_preact_ssr(void);
+// The compiled JS unit is exported with this name.
+// This can be configured at compile-time with -DUNIT_NAME=your_name
+#ifndef UNIT_NAME
+#define UNIT_NAME ssr_router
+#endif
+
+// Macro magic to create the function name
+#define CONCAT_IMPL(a, b) a##b
+#define CONCAT(a, b) CONCAT_IMPL(a, b)
+#define EXPORT_FN(name) CONCAT(sh_export_, name)
+
+extern "C" SHUnit *EXPORT_FN(UNIT_NAME)(void);
 
 int main(int argc, char **argv) {
     // Initialize the Static Hermes runtime ONCE
@@ -36,7 +46,7 @@ int main(int argc, char **argv) {
 
     // Initialize the compiled JS unit ONCE
     SHLegacyValue resultOrExc;
-    if (!_sh_unit_init_guarded(shr, sh_export_preact_ssr, &resultOrExc)) {
+    if (!_sh_unit_init_guarded(shr, EXPORT_FN(UNIT_NAME), &resultOrExc)) {
         std::cerr << "Failed to initialize JS unit" << std::endl;
         _sh_done(shr);
         return 1;

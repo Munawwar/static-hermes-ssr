@@ -36,7 +36,7 @@ if not os.path.exists(SINGLE_BIN):
 
 print("=== Static Hermes SSR: Warm vs Cold Benchmark ===\n")
 
-# === Cold Start Benchmark (single-shot binary) ===
+# === Cold Start Benchmark (single-run binary) ===
 print(f"Running cold start benchmark ({NUM_REQUESTS} runs)...")
 cold_times = []
 

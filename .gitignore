@@ -4,6 +4,10 @@ hermes-static_h/
 # Build artifacts
 build/
 
+# Frontend build artifacts
+example-frontend/node_modules/
+example-frontend/dist/
+
 # Editor
 .vscode/
 .idea/

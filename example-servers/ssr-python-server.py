@@ -109,11 +109,12 @@ class SSRServer:
 if __name__ == "__main__":
     print("=== Static Hermes SSR: Persistent Server Example ===\n")
 
-    # Example requests
+    # Example requests - testing multiple routes
     requests = [
-        {"counter": 1, "urlPathname": "/"},
-        {"counter": 42, "urlPathname": "/about"},
-        {"counter": 99, "urlPathname": "/"},
+        {"route": "/", "counter": 1},
+        {"route": "/about", "user": "Alice"},
+        {"route": "/blog"},
+        {"route": "/", "counter": 99},
     ]
 
     # Use context manager for automatic cleanup

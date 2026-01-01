@@ -1,0 +1,16 @@
+{
+  "name": "static-hermes-ssr-frontend",
+  "version": "1.0.0",
+  "description": "Preact frontend example for Static Hermes SSR",
+  "type": "module",
+  "scripts": {
+    "build": "node build-bundle.mjs"
+  },
+  "dependencies": {
+    "preact": "^10.19.3",
+    "preact-render-to-string": "^6.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.11"
+  }
+}
