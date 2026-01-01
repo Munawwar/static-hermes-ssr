@@ -1,0 +1,13 @@
+# Hermes source code (clone separately)
+hermes-static_h/
+
+# Build artifacts
+build/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
