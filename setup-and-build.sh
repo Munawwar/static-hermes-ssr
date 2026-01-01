@@ -63,7 +63,7 @@ gcc -c -std=gnu11 -DNDEBUG \
     -I "$HERMES_BUILD/lib/config" \
     -o "$BUILD_DIR/preact-ssr.o"
 
-# Step 4: Compile C++ wrapper
+# Step 4: Compile C++ wrapper (single-shot version)
 echo "Compiling C++ wrapper..."
 g++ -c -std=c++17 \
     "$SRC_DIR/ssr-wrapper.cpp" \
@@ -74,8 +74,8 @@ g++ -c -std=c++17 \
     -I "$HERMES_BUILD/lib/config" \
     -o "$BUILD_DIR/ssr-wrapper.o"
 
-# Step 5: Link
-echo "Linking..."
+# Step 5: Link single-shot binary
+echo "Linking ssr-bin..."
 g++ \
     "$BUILD_DIR/ssr-wrapper.o" \
     "$BUILD_DIR/preact-ssr.o" \
@@ -89,12 +89,42 @@ g++ \
     -lpthread -ldl -lm \
     -o "$BUILD_DIR/ssr-bin"
 
+# Step 6: Compile C++ server (persistent version)
+echo "Compiling C++ server..."
+g++ -c -std=c++17 \
+    "$SRC_DIR/ssr-server.cpp" \
+    -I "$HERMES_DIR/include" \
+    -I "$HERMES_DIR/public" \
+    -I "$HERMES_DIR/API" \
+    -I "$HERMES_DIR/API/jsi" \
+    -I "$HERMES_BUILD/lib/config" \
+    -o "$BUILD_DIR/ssr-server.o"
+
+# Step 7: Link server binary
+echo "Linking ssr-server..."
+g++ \
+    "$BUILD_DIR/ssr-server.o" \
+    "$BUILD_DIR/preact-ssr.o" \
+    -L "$HERMES_BUILD/lib" \
+    -L "$HERMES_BUILD/API/hermes" \
+    -L "$HERMES_BUILD/jsi" \
+    -L "$HERMES_BUILD/external/boost/boost_1_86_0/libs/context" \
+    -Wl,--start-group \
+    -lhermesvm_a -lhermesapi -ljsi -lboost_context \
+    -Wl,--end-group \
+    -lpthread -ldl -lm \
+    -o "$BUILD_DIR/ssr-server"
+
 # Clean up object files
-rm -f "$BUILD_DIR/preact-ssr.o" "$BUILD_DIR/ssr-wrapper.o"
+rm -f "$BUILD_DIR/preact-ssr.o" "$BUILD_DIR/ssr-wrapper.o" "$BUILD_DIR/ssr-server.o"
 
 echo ""
 echo "=== Build Complete ==="
-echo "Binary: $BUILD_DIR/ssr-bin ($(du -h "$BUILD_DIR/ssr-bin" | cut -f1))"
+echo "Binary (single-shot): $BUILD_DIR/ssr-bin ($(du -h "$BUILD_DIR/ssr-bin" | cut -f1))"
+echo "Binary (server):      $BUILD_DIR/ssr-server ($(du -h "$BUILD_DIR/ssr-server" | cut -f1))"
 echo ""
-echo "Test:"
+echo "Test single-shot:"
 echo "  ./build/ssr-bin '{\"counter\": 42, \"urlPathname\": \"/\"}'"
+echo ""
+echo "Test server (stdin):"
+echo "  echo '{\"counter\": 42, \"urlPathname\": \"/\"}' | ./build/ssr-server"
