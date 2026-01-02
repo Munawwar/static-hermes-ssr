@@ -1,150 +1,143 @@
 /**
  * FileReader polyfill for Static Hermes SSR
- * ES5-compatible syntax for Hermes compilation
+ * ES6 class syntax to work with ES6 EventTarget
  * Works with our custom Blob implementation
  */
 
 (function() {
   if (globalThis.FileReader) return;
 
-  // Reference EventTarget from globalThis
-  var EventTarget = globalThis.EventTarget;
-  var Event = globalThis.Event;
-
   // FileReader constants
-  var EMPTY = 0;
-  var LOADING = 1;
-  var DONE = 2;
+  const EMPTY = 0;
+  const LOADING = 1;
+  const DONE = 2;
 
-  // FileReader constructor (extends EventTarget)
-  function FileReader() {
-    EventTarget.call(this);
-    this.readyState = EMPTY;
-    this.result = null;
-    this.error = null;
-    this.onloadstart = null;
-    this.onprogress = null;
-    this.onload = null;
-    this.onabort = null;
-    this.onerror = null;
-    this.onloadend = null;
-  }
+  // FileReader class (extends EventTarget)
+  class FileReader extends globalThis.EventTarget {
+    static EMPTY = EMPTY;
+    static LOADING = LOADING;
+    static DONE = DONE;
 
-  // Inherit from EventTarget
-  FileReader.prototype = Object.create(EventTarget.prototype);
-  FileReader.prototype.constructor = FileReader;
-
-  // Static constants
-  FileReader.EMPTY = EMPTY;
-  FileReader.LOADING = LOADING;
-  FileReader.DONE = DONE;
-
-  FileReader.prototype._dispatch = function(type, detail) {
-    detail = detail || {};
-    var event = new Event(type);
-    var keys = Object.keys(detail);
-    for (var i = 0; i < keys.length; i++) {
-      event[keys[i]] = detail[keys[i]];
+    constructor() {
+      super();
+      this.readyState = EMPTY;
+      this.result = null;
+      this.error = null;
+      this.onloadstart = null;
+      this.onprogress = null;
+      this.onload = null;
+      this.onabort = null;
+      this.onerror = null;
+      this.onloadend = null;
     }
 
-    var handler = this['on' + type];
-    if (typeof handler === 'function') {
-      try {
-        handler.call(this, event);
-      } catch (e) {
-        if (globalThis.console) {
-          globalThis.console.error('FileReader handler error:', e);
+    _dispatch(type, detail) {
+      detail = detail || {};
+      var event = new globalThis.Event(type);
+      var keys = Object.keys(detail);
+      for (var i = 0; i < keys.length; i++) {
+        event[keys[i]] = detail[keys[i]];
+      }
+
+      var handler = this['on' + type];
+      if (typeof handler === 'function') {
+        try {
+          handler.call(this, event);
+        } catch (e) {
+          if (globalThis.console) {
+            globalThis.console.error('FileReader handler error:', e);
+          }
         }
       }
-    }
-    this.dispatchEvent(event);
-  };
-
-  FileReader.prototype._read = function(blob, format) {
-    if (this.readyState === LOADING) {
-      throw new globalThis.DOMException('FileReader is already reading', 'InvalidStateError');
+      this.dispatchEvent(event);
     }
 
-    this.readyState = LOADING;
-    this.result = null;
-    this.error = null;
+    _read(blob, format) {
+      if (this.readyState === LOADING) {
+        throw new globalThis.DOMException('FileReader is already reading', 'InvalidStateError');
+      }
 
-    var size = blob.size || 0;
-    var self = this;
+      this.readyState = LOADING;
+      this.result = null;
+      this.error = null;
 
-    // Use Promise for async behavior
-    Promise.resolve().then(function() {
-      self._dispatch('loadstart', { loaded: 0, total: size });
+      var size = blob.size || 0;
+      var self = this;
 
-      return Promise.resolve().then(function() {
-        switch (format) {
-          case 'arrayBuffer':
-            return blob.arrayBuffer();
+      // Use Promise for async behavior
+      Promise.resolve().then(function() {
+        self._dispatch('loadstart', { loaded: 0, total: size });
 
-          case 'binaryString':
-            return blob.arrayBuffer().then(function(buffer) {
-              var bytes = new Uint8Array(buffer);
-              var result = '';
-              for (var i = 0; i < bytes.length; i++) {
-                result += String.fromCharCode(bytes[i]);
-              }
-              return result;
-            });
+        return Promise.resolve().then(function() {
+          switch (format) {
+            case 'arrayBuffer':
+              return blob.arrayBuffer();
 
-          case 'dataURL':
-            return blob.arrayBuffer().then(function(buffer) {
-              var bytes = new Uint8Array(buffer);
-              var binary = '';
-              for (var i = 0; i < bytes.length; i++) {
-                binary += String.fromCharCode(bytes[i]);
-              }
-              var base64 = globalThis.btoa(binary);
-              var mediaType = blob.type || 'application/octet-stream';
-              return 'data:' + mediaType + ';base64,' + base64;
-            });
+            case 'binaryString':
+              return blob.arrayBuffer().then(function(buffer) {
+                var bytes = new Uint8Array(buffer);
+                var result = '';
+                for (var i = 0; i < bytes.length; i++) {
+                  result += String.fromCharCode(bytes[i]);
+                }
+                return result;
+              });
 
-          case 'text':
-          default:
-            return blob.text();
-        }
+            case 'dataURL':
+              return blob.arrayBuffer().then(function(buffer) {
+                var bytes = new Uint8Array(buffer);
+                var binary = '';
+                for (var i = 0; i < bytes.length; i++) {
+                  binary += String.fromCharCode(bytes[i]);
+                }
+                var base64 = globalThis.btoa(binary);
+                var mediaType = blob.type || 'application/octet-stream';
+                return 'data:' + mediaType + ';base64,' + base64;
+              });
+
+            case 'text':
+            default:
+              return blob.text();
+          }
+        });
+      }).then(function(result) {
+        self.readyState = DONE;
+        self.result = result;
+        self._dispatch('progress', { loaded: size, total: size });
+        self._dispatch('load');
+        self._dispatch('loadend');
+      }).catch(function(err) {
+        self.readyState = DONE;
+        self.error = err;
+        self._dispatch('error');
+        self._dispatch('loadend');
       });
-    }).then(function(result) {
-      self.readyState = DONE;
-      self.result = result;
-      self._dispatch('progress', { loaded: size, total: size });
-      self._dispatch('load');
-      self._dispatch('loadend');
-    }).catch(function(err) {
-      self.readyState = DONE;
-      self.error = err;
-      self._dispatch('error');
-      self._dispatch('loadend');
-    });
-  };
+    }
 
-  FileReader.prototype.abort = function() {
-    if (this.readyState !== LOADING) return;
-    this.readyState = DONE;
-    this.result = null;
-    this._dispatch('abort');
-    this._dispatch('loadend');
-  };
+    abort() {
+      if (this.readyState !== LOADING) return;
+      this.readyState = DONE;
+      this.result = null;
+      this._dispatch('abort');
+      this._dispatch('loadend');
+    }
 
-  FileReader.prototype.readAsArrayBuffer = function(blob) {
-    this._read(blob, 'arrayBuffer');
-  };
+    readAsArrayBuffer(blob) {
+      this._read(blob, 'arrayBuffer');
+    }
 
-  FileReader.prototype.readAsBinaryString = function(blob) {
-    this._read(blob, 'binaryString');
-  };
+    readAsBinaryString(blob) {
+      this._read(blob, 'binaryString');
+    }
 
-  FileReader.prototype.readAsDataURL = function(blob) {
-    this._read(blob, 'dataURL');
-  };
+    readAsDataURL(blob) {
+      this._read(blob, 'dataURL');
+    }
 
-  FileReader.prototype.readAsText = function(blob, encoding) {
-    this._read(blob, 'text');
-  };
+    readAsText(blob, encoding) {
+      this._read(blob, 'text');
+    }
+  }
 
   globalThis.FileReader = FileReader;
 })();
