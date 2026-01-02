@@ -58,6 +58,15 @@ else
         echo "OpenSSL not found - crypto.subtle will NOT be available"
         echo "  Install with: sudo apt install libssl-dev"
     fi
+
+    # Check for ICU and link if available (for full Unicode/Intl support)
+    if pkg-config --exists icu-uc 2>/dev/null; then
+        echo "ICU found - full Unicode/Intl support enabled"
+        PLATFORM_LIBS="$PLATFORM_LIBS $(pkg-config --libs icu-uc icu-i18n)"
+    elif [ -f /usr/include/unicode/uchar.h ]; then
+        echo "ICU found - full Unicode/Intl support enabled"
+        PLATFORM_LIBS="$PLATFORM_LIBS -licuuc -licui18n -licudata"
+    fi
 fi
 
 # Step 1: Compile JavaScript bundle to C with shermes
