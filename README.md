@@ -10,6 +10,12 @@ Compile a example preact frontend to native binary using Facebook's Static Herme
 
 Partly inspired by [Devon Govett's tweet](https://x.com/devongovett/status/2005538743034470645) about compiling Less.js to a native Rust plugin.
 
+Limitations:
+1. Only ES2022 is allowed currently by Hermes
+2. Hermes doesn't support dynamic imports
+3. I compiled the binary with partial unicode support. Full unicode support will increase size of binary by another 6 MB.
+4. There are no Web APIs (including fetch()).
+
 ## Performance
 
 | Mode | Execution | Memory | Requests/sec |

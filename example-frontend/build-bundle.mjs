@@ -20,13 +20,16 @@ try {
     entryPoints: [join(__dirname, 'src/router.jsx')],
     bundle: true,
     format: 'esm',
-    target: 'es2020',
+    target: 'es2022', // Hermes supports up to ES2022
     outfile: join(__dirname, 'dist/bundle.mjs'),
     platform: 'neutral',
     jsx: 'automatic',
     jsxImportSource: 'preact',
     logLevel: 'info',
     minify: false, // Keep readable for debugging
+    define: {
+      'process.env.SSR': 'true'
+    },
   });
 
   console.log('\n✅ Bundle created: dist/bundle.mjs');
