@@ -54,7 +54,7 @@ RUN gcc -c -std=gnu11 -DNDEBUG -O2 \
     -I hermes-static_h/cmake-build-release/lib/config \
     -o /build/lambda/hello.o
 
-# Compile the native Lambda runtime (with integrated Hermes)
+# Compile the native Lambda runtime
 RUN g++ -c -std=c++17 -DNDEBUG -O3 \
     -DUNIT_NAME=hello \
     /build/lambda/lambda-runtime.cpp \
@@ -77,7 +77,6 @@ RUN g++ \
     -lhermesvm_a -lhermesapi -ljsi -lboost_context \
     -Wl,--end-group \
     -lpthread -ldl -lm \
-    -O3 \
     -o /build/lambda/bootstrap
 
 # Strip debug symbols for smaller binary
