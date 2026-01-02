@@ -368,6 +368,50 @@ aws lambda delete-function --profile $PROFILE --function-name hermes-ssr-zip 2>/
 echo "Cleanup complete"
 ```
 
+## Benchmark Results
+
+### Final Configuration
+- **Runtime:** provided.al2023 (ZIP deployment)
+- **Memory:** 128MB
+- **Architecture:** x86_64
+- **Build:** Amazon Linux 2023 Docker with LTO optimization
+
+### Cold Start Results (Init Duration)
+
+| Configuration | Avg Cold Start | Binary Size | Notes |
+|--------------|----------------|-------------|-------|
+| Baseline (no optimizations) | ~56ms | ~5.7MB | Native C++ Lambda Runtime |
+| LTO on our code only | 57.27ms | 5.7MB | No improvement |
+| **LTO on Hermes** | **43-44ms** | **3.5MB** | Best result! |
+| LTO + static linking | 47.47ms | 4.6MB | Worse than LTO alone |
+| musl (Alpine) | N/A | N/A | Build failed (glibc-specific code) |
+
+### Comparison with lambda-perf (al2023, 128MB, x86_64)
+
+| Runtime | Avg Cold Start | Notes |
+|---------|----------------|-------|
+| Go | 55.60ms | Reference benchmark |
+| **Static Hermes** | **43-44ms** | **12ms faster than Go!** |
+
+### Warm Execution
+
+| Configuration | Avg Duration |
+|--------------|--------------|
+| Bash bootstrap (curl) | ~305ms |
+| **Native C++ Runtime** | **~1.2ms** |
+
+### Key Optimizations
+
+1. **Native C++ Lambda Runtime** - Eliminated bash/curl overhead (305ms → 1.2ms warm)
+2. **LTO on Hermes build** - `-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON` reduced cold start by ~24% and binary size by ~37%
+
+### What Didn't Help
+
+- LTO on just our code (negligible impact)
+- Static linking libstdc++/libgcc (increased size and cold start)
+- musl libc (Hermes uses glibc-specific APIs)
+- AL2 runtime (glibc version incompatibility)
+
 ## References
 
 - Lambda Perf Benchmarks: https://maxday.github.io/lambda-perf/
