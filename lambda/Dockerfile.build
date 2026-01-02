@@ -1,0 +1,92 @@
+# Build environment for Static Hermes on Amazon Linux 2023
+# This ensures binary compatibility with AWS Lambda
+
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023
+
+# Install build dependencies
+RUN dnf install -y \
+    gcc \
+    gcc-c++ \
+    cmake \
+    make \
+    python3 \
+    tar \
+    gzip \
+    && dnf clean all
+
+# Create build directory
+WORKDIR /build
+
+# Copy Hermes source
+COPY hermes-static_h /build/hermes-static_h
+
+# Clean any existing build artifacts and build fresh
+RUN rm -rf hermes-static_h/cmake-build-release && \
+    cmake -B hermes-static_h/cmake-build-release -S hermes-static_h \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DHERMES_UNICODE_LITE=ON \
+    && cmake --build hermes-static_h/cmake-build-release --target shermes -j$(nproc) \
+    && cmake --build hermes-static_h/cmake-build-release --target ExtensionsBytecodeInclude -j$(nproc) \
+    && cmake --build hermes-static_h/cmake-build-release --target hermesvm_a -j$(nproc) \
+    && cmake --build hermes-static_h/cmake-build-release --target hermesapi -j$(nproc) \
+    && cmake --build hermes-static_h/cmake-build-release --target jsi -j$(nproc)
+
+# Copy source files needed for building the binary
+COPY src /build/src
+
+# Create lambda directory and copy files
+RUN mkdir -p /build/lambda
+COPY lambda/hello.js /build/lambda/hello.js
+COPY lambda/lambda-runtime.cpp /build/lambda/lambda-runtime.cpp
+
+# Compile hello.js to C
+RUN hermes-static_h/cmake-build-release/bin/shermes \
+    -emit-c \
+    -exported-unit=hello \
+    -O \
+    -o /build/lambda/hello.c \
+    /build/lambda/hello.js
+
+# Compile JS-generated C to object file
+RUN gcc -c -std=gnu11 -DNDEBUG -O2 \
+    /build/lambda/hello.c \
+    -I hermes-static_h/include \
+    -I hermes-static_h/cmake-build-release/lib/config \
+    -o /build/lambda/hello.o
+
+# Compile the native Lambda runtime (with integrated Hermes)
+RUN g++ -c -std=c++17 -DNDEBUG -O3 \
+    -DUNIT_NAME=hello \
+    /build/lambda/lambda-runtime.cpp \
+    -I hermes-static_h/include \
+    -I hermes-static_h/public \
+    -I hermes-static_h/API \
+    -I hermes-static_h/API/jsi \
+    -I hermes-static_h/cmake-build-release/lib/config \
+    -o /build/lambda/lambda-runtime.o
+
+# Link the final bootstrap binary
+RUN g++ \
+    /build/lambda/lambda-runtime.o \
+    /build/lambda/hello.o \
+    -L hermes-static_h/cmake-build-release/lib \
+    -L hermes-static_h/cmake-build-release/API/hermes \
+    -L hermes-static_h/cmake-build-release/jsi \
+    -L hermes-static_h/cmake-build-release/external/boost/boost_1_86_0/libs/context \
+    -Wl,--start-group \
+    -lhermesvm_a -lhermesapi -ljsi -lboost_context \
+    -Wl,--end-group \
+    -lpthread -ldl -lm \
+    -O3 \
+    -o /build/lambda/bootstrap
+
+# Strip debug symbols for smaller binary
+RUN strip /build/lambda/bootstrap
+
+# Check dependencies and size
+RUN ldd /build/lambda/bootstrap || true
+RUN ls -la /build/lambda/bootstrap
+
+# Output directory
+RUN mkdir -p /output
+RUN cp /build/lambda/bootstrap /output/
