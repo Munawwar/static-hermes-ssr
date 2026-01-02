@@ -26,7 +26,7 @@ Limitations:
 Baseline binary size: ~5MB
 
 Notes:
-- All JS pages / routes are in one binary. Adding multiple routes hardly increases the binary size.
+- All JS pages / routes are in one binary. It's still ~5MB binary size. Adding multiple routes hardly increases the binary size.
 - Node.js V8 JIT is faster. *But* practically at <1ms per req (per core), most likely isn't going to be your bottleneck
 
 Run benchmarks:
