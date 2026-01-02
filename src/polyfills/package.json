@@ -1,0 +1,22 @@
+{
+  "name": "@hermes-ssr/polyfills",
+  "version": "0.3.0",
+  "description": "Web API polyfills for Static Hermes SSR",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./minimal": "./test-minimal.js"
+  },
+  "dependencies": {
+    "@ungap/structured-clone": "^1.2.0",
+    "abort-controller": "^3.0.0"
+  },
+  "keywords": [
+    "hermes",
+    "ssr",
+    "polyfill",
+    "web-api"
+  ],
+  "license": "MIT"
+}

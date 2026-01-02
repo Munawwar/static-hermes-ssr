@@ -14,7 +14,24 @@ Limitations:
 1. Only ES2022 is allowed currently by Hermes
 2. Hermes doesn't support dynamic imports
 3. I compiled the binary with partial unicode support. Full unicode support will increase size of binary by another 6 MB.
-4. There are no Web APIs (including fetch()).
+
+## Web API Polyfills
+
+The `src/polyfills/` directory provides Web APIs for SSR. Most work but aren't 100% spec-compliant:
+
+| API | Status | Notes |
+|-----|--------|-------|
+| `console.log/warn/error` | Full | Outputs to stderr |
+| `atob`, `btoa` | Full | Base64 encoding/decoding |
+| `crypto.randomUUID` | Full | Uses native `crypto.getRandomValues` |
+| `structuredClone` | Full | Via `@ungap/structured-clone` npm package |
+| `AbortController`, `AbortSignal` | Partial | Missing: `timeout()`, `any()`, `reason` |
+| `URL`, `URLSearchParams` | Partial | Missing: Punycode/IDNA, IPv6, `ftp:`/`file:` schemes |
+| `Event`, `CustomEvent`, `EventTarget` | Partial | No bubbling/capture phase (SSR doesn't need it) |
+| `DOMException` | Partial | Basic error subclass |
+| `Blob`, `File`, `FileReader` | Partial | Rarely needed for SSR; no `stream()` |
+| `Headers`, `Request`, `Response` | Stub | Structure only, no actual fetch |
+| `setTimeout`, `setInterval` | Stub | No-op for SSR (returns dummy IDs) |
 
 ## Performance
 
