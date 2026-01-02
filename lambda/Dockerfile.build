@@ -21,10 +21,12 @@ WORKDIR /build
 COPY hermes-static_h /build/hermes-static_h
 
 # Clean any existing build artifacts and build fresh
+# Build Hermes with LTO for smaller/faster binary
 RUN rm -rf hermes-static_h/cmake-build-release && \
     cmake -B hermes-static_h/cmake-build-release -S hermes-static_h \
     -DCMAKE_BUILD_TYPE=Release \
     -DHERMES_UNICODE_LITE=ON \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
     && cmake --build hermes-static_h/cmake-build-release --target shermes -j$(nproc) \
     && cmake --build hermes-static_h/cmake-build-release --target ExtensionsBytecodeInclude -j$(nproc) \
     && cmake --build hermes-static_h/cmake-build-release --target hermesvm_a -j$(nproc) \
