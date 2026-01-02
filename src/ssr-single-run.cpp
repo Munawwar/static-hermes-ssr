@@ -14,6 +14,9 @@
 #include <iostream>
 #include <string>
 
+// Native Web APIs (performance.now, crypto.getRandomValues)
+#include "native-apis.h"
+
 // The compiled JS unit is exported with this name.
 // The name comes from -exported-unit flag when compiling with shermes.
 // This can be configured at compile-time with -DUNIT_NAME=your_name
@@ -53,6 +56,9 @@ int main(int argc, char **argv) {
         _sh_done(shr);
         return 1;
     }
+
+    // Install native Web APIs (performance.now, crypto.getRandomValues)
+    hermes_ssr::installNativeAPIs(*hermes);
 
     // Initialize the compiled JS unit
     SHLegacyValue resultOrExc;

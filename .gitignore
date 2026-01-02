@@ -1,8 +1,10 @@
 # Hermes source code (clone separately)
 hermes-static_h/
 
-# Build artifacts
-build/
+# Build artifacts (except the final binaries)
+build/*
+!build/ssr-bin
+!build/ssr-server
 
 # Frontend build artifacts
 example-frontend/node_modules/

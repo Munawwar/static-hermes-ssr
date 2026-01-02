@@ -36,11 +36,14 @@ if [ ! -f "$HERMES_BUILD/bin/shermes" ]; then
     cmake -B "$HERMES_BUILD" -S "$HERMES_DIR" \
         -G "$GENERATOR" \
         -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
         -DHERMES_UNICODE_LITE=$USE_ICU_LITE
 
     cmake --build "$HERMES_BUILD" --target shermes -j$(nproc)
+    cmake --build "$HERMES_BUILD" --target ExtensionsBytecodeInclude -j$(nproc)
     cmake --build "$HERMES_BUILD" --target hermesvm_a -j$(nproc)
     cmake --build "$HERMES_BUILD" --target hermesapi -j$(nproc)
+    cmake --build "$HERMES_BUILD" --target jsi -j$(nproc)
 
     echo ""
     echo "✅ Hermes built successfully!"

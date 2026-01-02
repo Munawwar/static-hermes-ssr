@@ -35,6 +35,40 @@ fi
 
 mkdir -p "$BUILD_DIR"
 
+# Detect OS for platform-specific flags
+OS="$(uname -s)"
+echo "Detected OS: $OS"
+
+if [ "$OS" = "Darwin" ]; then
+    # macOS: no --start-group, no -ldl, link Security + CommonCrypto frameworks
+    LINK_GROUP_START=""
+    LINK_GROUP_END=""
+    PLATFORM_LIBS="-framework Security"
+else
+    # Linux: use --start-group for circular deps
+    LINK_GROUP_START="-Wl,--start-group"
+    LINK_GROUP_END="-Wl,--end-group"
+    PLATFORM_LIBS="-ldl"
+
+    # Check for OpenSSL and link if available
+    if pkg-config --exists openssl 2>/dev/null || [ -f /usr/include/openssl/sha.h ]; then
+        echo "OpenSSL found - crypto.subtle will be available"
+        PLATFORM_LIBS="$PLATFORM_LIBS -lssl -lcrypto"
+    else
+        echo "OpenSSL not found - crypto.subtle will NOT be available"
+        echo "  Install with: sudo apt install libssl-dev"
+    fi
+
+    # Check for ICU and link if available (for full Unicode/Intl support)
+    if pkg-config --exists icu-uc 2>/dev/null; then
+        echo "ICU found - full Unicode/Intl support enabled"
+        PLATFORM_LIBS="$PLATFORM_LIBS $(pkg-config --libs icu-uc icu-i18n)"
+    elif [ -f /usr/include/unicode/uchar.h ]; then
+        echo "ICU found - full Unicode/Intl support enabled"
+        PLATFORM_LIBS="$PLATFORM_LIBS -licuuc -licui18n -licudata"
+    fi
+fi
+
 # Step 1: Compile JavaScript bundle to C with shermes
 echo "Step 1: Compiling JS to C with shermes..."
 "$HERMES_BUILD/bin/shermes" \
@@ -46,7 +80,7 @@ echo "Step 1: Compiling JS to C with shermes..."
 
 # Step 2: Compile C file
 echo "Step 2: Compiling C..."
-gcc -c -std=gnu11 -DNDEBUG \
+gcc -c -std=gnu11 -DNDEBUG -O2 \
     "$BUILD_DIR/${UNIT_NAME}.c" \
     -I "$HERMES_DIR/include" \
     -I "$HERMES_BUILD/lib/config" \
@@ -54,7 +88,7 @@ gcc -c -std=gnu11 -DNDEBUG \
 
 # Step 3: Compile C++ single-run wrapper
 echo "Step 3: Compiling C++ single-run wrapper..."
-g++ -c -std=c++17 \
+g++ -c -std=c++17 -DNDEBUG -O2 \
     -DUNIT_NAME="$UNIT_NAME" \
     "$SRC_DIR/ssr-single-run.cpp" \
     -I "$HERMES_DIR/include" \
@@ -73,15 +107,15 @@ g++ \
     -L "$HERMES_BUILD/API/hermes" \
     -L "$HERMES_BUILD/jsi" \
     -L "$HERMES_BUILD/external/boost/boost_1_86_0/libs/context" \
-    -Wl,--start-group \
+    $LINK_GROUP_START \
     -lhermesvm_a -lhermesapi -ljsi -lboost_context \
-    -Wl,--end-group \
-    -lpthread -ldl -lm \
+    $LINK_GROUP_END \
+    -lpthread $PLATFORM_LIBS -lm \
     -o "$BUILD_DIR/${OUTPUT_PREFIX}-bin"
 
 # Step 5: Compile C++ server wrapper
 echo "Step 5: Compiling C++ server wrapper..."
-g++ -c -std=c++17 \
+g++ -c -std=c++17 -DNDEBUG -O2 \
     -DUNIT_NAME="$UNIT_NAME" \
     "$SRC_DIR/ssr-server.cpp" \
     -I "$HERMES_DIR/include" \
@@ -100,10 +134,10 @@ g++ \
     -L "$HERMES_BUILD/API/hermes" \
     -L "$HERMES_BUILD/jsi" \
     -L "$HERMES_BUILD/external/boost/boost_1_86_0/libs/context" \
-    -Wl,--start-group \
+    $LINK_GROUP_START \
     -lhermesvm_a -lhermesapi -ljsi -lboost_context \
-    -Wl,--end-group \
-    -lpthread -ldl -lm \
+    $LINK_GROUP_END \
+    -lpthread $PLATFORM_LIBS -lm \
     -o "$BUILD_DIR/${OUTPUT_PREFIX}-server"
 
 # Clean up object files
