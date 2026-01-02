@@ -13,19 +13,20 @@ Partly inspired by [Devon Govett's tweet](https://x.com/devongovett/status/20055
 Limitations:
 1. Only ES2022 is allowed currently by Hermes
 2. Hermes doesn't support dynamic imports
-3. I compiled the binary with partial unicode support. Full unicode support will increase size of binary by another 6 MB.
-4. I polyfilled a few Web APIs, but expect missing features / differences from spec. Check [Web API Polyfills](#web-api-polyfills) section below.
+3. I polyfilled a few Web APIs, but expect missing features / differences from spec. Check [Web API Polyfills](#web-api-polyfills) section below.
 
 ## Performance
 
 | Mode | Execution | Memory | Requests/sec |
 |------|-----------|--------|--------------|
-| Single-run (cold) | ~2.5ms | ~8MB | ~400 |
-| Persistent (warm) | **~0.08ms** | ~8MB | **~12,500** |
+| Single-run (cold) | ~3.3ms | ~8MB | ~300 |
+| Persistent (warm) | **~0.09ms** | ~8MB | **~11,000** |
 | Node.js (warm) | ~0.03ms | ~50MB | ~29,000 |
 
+Baseline binary size: ~5MB
+
 Notes:
-- All JS pages / routes are in one binary (~7.5MB). Adding multiple routes hardly increases the binary size.
+- All JS pages / routes are in one binary. Adding multiple routes hardly increases the binary size.
 - Node.js V8 JIT is faster. *But* practically at <1ms per req (per core), most likely isn't going to be your bottleneck
 
 Run benchmarks:
